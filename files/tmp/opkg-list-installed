@@ -1,3 +1,4 @@
+# NOTE kmod-lp and kmod-usb-printer are NOT installed but are still required!
 base-files - 157-r46767
 busybox - 1.23.2-1
 ddns-scripts - 2.4.3-1
