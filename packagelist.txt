@@ -37,8 +37,9 @@ luci-app-p910nd
 # dynamic dns updater
 ddns-scripts
 luci-app-ddns
-# wget with ssl support
-wget
+# add curl with ssl support
+# superiour to wget insofar as it can skip downloads based on modification time stamps
+curl
 # add https webserver
 ca-certificates
 uhttpd
