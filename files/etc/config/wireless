@@ -1,0 +1,18 @@
+
+config wifi-device 'radio0'
+	option type 'mac80211'
+	option channel '11'
+	option hwmode '11g'
+	option path 'platform/ath9k'
+	option txpower '23'
+	option country 'US'
+	option htmode 'HT40'
+
+config wifi-iface
+	option device 'radio0'
+	option network 'lan'
+	option mode 'ap'
+	option ssid 'CrazySSID'
+	option encryption 'psk2'
+	option key 'CrazyPwd'
+

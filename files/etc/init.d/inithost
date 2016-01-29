@@ -1,0 +1,38 @@
+#!/bin/sh
+
+# TODO ... create an init script out of it ...
+#  make sure this script is started AFTER the start of dnsmasq
+
+#ENDPOINT_IP4=$(uci get network.lan.ipaddr)
+
+zcat /usr/share/inithost/host.mvps.gz > /tmp/hosts/host.mvps
+zcat /usr/share/inithost/host.porn.gz > /tmp/hosts/host.porn
+cat /usr/share/hosts.custom > /tmp/hosts/hosts.custom
+
+wget -O - http://www.mvps.org/winhelp2002/hosts.txt | \
+ grep 0.0.0.0 | sed 's/[[:space:]]*#.*$//g' | \
+ grep -v localhost | tr -d '\r' | tr -s '\t' | \
+ tr -d '\015' > /tmp/hosts/hosts.mvps.new
+
+if cmp /tmp/hosts/hosts.mvps /tmp/hosts/hosts.mvps.new ; then
+  logger "No changes in MVPS host file...keeping old one"
+  rm /tmp/hosts/hosts.mvps.new
+else
+  logger "MVPS host file has changed...updating it"
+  rm /tmp/hosts/hosts.mvps
+  mv /tmp/hosts/hosts.mvps.new /tmp/hosts/hosts.mvps
+  rm /etc/hosts.mvps.gz
+  cat /tmp/hosts/hosts.mvps > /etc/hosts.mvps
+  gzip /etc/hosts.mvps
+fi
+
+# TODO if internet connected retrieve a better porn host file from internet, too
+
+iptables -t nat -A PREROUTING -i br-lan -p tcp --dport 53 -j DNAT --to 192.168.1.1
+iptables -t nat -A PREROUTING -i br-lan -p udp --dport 53 -j DNAT --to 192.168.1.1
+
+killall -HUP dnsmasq
+
+if [ -s /usr/share/inithost/hosts.mvps ]; then
+  gzip /usr/share/inithost/hosts.mvps
+fi
