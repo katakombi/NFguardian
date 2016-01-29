@@ -1,0 +1,61 @@
+# default ar71xx package list
+base-files 
+libc 
+libgcc 
+busybox 
+dropbear 
+mtd 
+uci 
+opkg 
+netifd 
+fstools 
+kmod-gpio-button-hotplug 
+swconfig 
+kmod-ath9k 
+wpad-mini 
+uboot-envtools 
+dnsmasq 
+iptables 
+ip6tables 
+ppp 
+ppp-mod-pppoe 
+kmod-nf-nathelper 
+firewall 
+odhcpd 
+odhcp6c
+# additional packages for TP-WR1043ND
+kmod-usb-core 
+kmod-usb2 
+kmod-ledtrig-usbdev
+# remove PPP support since it is not needed
+-ppp
+-ppp-mod-pppoe
+# add USB printer server support
+kmod-usb-printer
+p910nd
+luci-app-p910nd
+# dynamic dns updater
+ddns-scripts
+luci-app-ddns
+# wget with ssl support
+wget
+# add https webserver
+ca-certificates
+uhttpd
+# add luci
+lua
+luci
+luci-app-ddns
+luci-app-firewall
+luci-app-p910nd
+luci-base
+luci-lib-ip
+luci-lib-nixio
+luci-mod-admin-full
+luci-proto-ipv6
+luci-proto-ppp
+luci-ssl
+luci-theme-bootstrap
+# add gnu sort uses far less ram
+# which is needed for the inithost script
+coreutils-sort
