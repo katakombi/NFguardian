@@ -1,38 +1,138 @@
-#!/bin/sh
+#!/bin/sh /etc/rc.common
 
-# TODO ... create an init script out of it ...
-#  make sure this script is started AFTER the start of dnsmasq
+# make sure this script is started AFTER the start of dnsmasq
+START=65
 
 #ENDPOINT_IP4=$(uci get network.lan.ipaddr)
+ENDPOINT_IP4="0.0.0.0"
 
-zcat /usr/share/inithost/host.mvps.gz > /tmp/hosts/host.mvps
-zcat /usr/share/inithost/host.porn.gz > /tmp/hosts/host.porn
-cat /usr/share/hosts.custom > /tmp/hosts/hosts.custom
+PERSISTENTHOSTDIR=/usr/share/inithost
+TEMPHOSTDIR=/tmp/hosts
 
-wget -O - http://www.mvps.org/winhelp2002/hosts.txt | \
- grep 0.0.0.0 | sed 's/[[:space:]]*#.*$//g' | \
- grep -v localhost | tr -d '\r' | tr -s '\t' | \
- tr -d '\015' > /tmp/hosts/hosts.mvps.new
+unpack_local_hostfiles() {
+	for f in $(ls -1 $PERSISTENTHOSTDIR/*.gz) ; do
+		if test -e $PERSISTENTHOSTDIR/$(basename $f .gz); then
+			logger "Linking persistent host file $f to $TEMPHOSTDIR and updating zip file"
+			ln -sf $PERSISTENTHOSTDIR/$(basename $f .gz) $TEMPHOSTDIR/$(basename $f .gz)
+			cat $PERSISTENTHOSTDIR/$(basename $f .gz) | awk '{print $2}' | gzip -c > $f
+		else
+			logger "Unpacking persistent host file $f to $TEMPHOSTDIR"
+			zcat -f $f | awk '{print "'$ENDPOINT_IP4'", $0}' > $TEMPHOSTDIR/$(basename $f .gz)
+		fi
+	done
+}
 
-if cmp /tmp/hosts/hosts.mvps /tmp/hosts/hosts.mvps.new ; then
-  logger "No changes in MVPS host file...keeping old one"
-  rm /tmp/hosts/hosts.mvps.new
-else
-  logger "MVPS host file has changed...updating it"
-  rm /tmp/hosts/hosts.mvps
-  mv /tmp/hosts/hosts.mvps.new /tmp/hosts/hosts.mvps
-  rm /etc/hosts.mvps.gz
-  cat /tmp/hosts/hosts.mvps > /etc/hosts.mvps
-  gzip /etc/hosts.mvps
-fi
+update_hostfiles() {
 
-# TODO if internet connected retrieve a better porn host file from internet, too
+	# TODO if internet is connected retrieve a better porn host file from internet, too
 
-iptables -t nat -A PREROUTING -i br-lan -p tcp --dport 53 -j DNAT --to 192.168.1.1
-iptables -t nat -A PREROUTING -i br-lan -p udp --dport 53 -j DNAT --to 192.168.1.1
+	logger "Updating yoyo ad list..." 
+	curl -s -d mimetype=plaintext -d hostformat=unixhosts http://pgl.yoyo.org/adservers/serverlist.php? | sort -u > $TEMPHOSTDIR/host.yoyo.new
 
-killall -HUP dnsmasq
+	if zcat $PERSISTENTHOSTDIR/host.yoyo.gz | cmp $TEMPHOSTDIR/host.yoyo.new; then
+		logger "no changes"
+		mv -f $TEMPHOSTDIR/host.yoyo.new $TEMPHOSTDIR/host.yoyo
+	fi
 
-if [ -s /usr/share/inithost/hosts.mvps ]; then
-  gzip /usr/share/inithost/hosts.mvps
-fi
+	logger "Updating winhelp2002 ad list..." 
+	curl -s http://winhelp2002.mvps.org/hosts.txt   | \
+		grep 0.0.0.0 | sed 's/[[:space:]]*#.*$//g'  | \
+		grep -v localhost | tr -d '\r' | tr -s '\t' | \
+		tr -d '\015' | sort -u > $TEMPHOSTDIR/host.mvps.new
+
+	if zcat $PERSISTENTHOSTDIR/host.mvps.gz | cmp $TEMPHOSTDIR/host.mvps.new; then
+		logger "no changes"
+		mv -f $TEMPHOSTDIR/host.mvps.new $TEMPHOSTDIR/host.mvps
+	fi
+
+	logger "Updating adaway ad list..." 
+	curl -s https://adaway.org/hosts.txt | grep -v "#" | grep -v "::1" | sed '/^$/d' | sed 's/\ /\\ /g' | \
+		awk '{print $2}' | grep -v '^\\' | grep -v '\\$' | sort -u > $TEMPHOSTDIR/host.adaway.new
+
+	if zcat $PERSISTENTHOSTDIR/host.adaway.gz | cmp $TEMPHOSTDIR/host.adaway.new; then
+                logger "no changes"
+                mv -f $TEMPHOSTDIR/host.adaway.new $TEMPHOSTDIR/host.adaway
+        fi
+
+#	logger "Updating hosts-file ad list..." 
+#	curl -s http://hosts-file.net/.%5Cad_servers.txt | grep -v "#" | grep -v "::1" | sed '/^$/d' | \
+#		sed 's/\ /\\ /g' | awk '{print $2}' | grep -v '^\\' | grep -v '\\$' | sort -u > $TEMPHOSTDIR/host.hfnet.new
+#
+#        if zcat $PERSISTENTHOSTDIR/host.hfnet.gz | cmp $TEMPHOSTDIR/host.hfnet.new; then
+#                logger "no changes" 
+#                mv -f $TEMPHOSTDIR/host.hfnet.new $TEMPHOSTDIR/host.hfnet
+#        fi
+
+	logger "Updating malwaredomainlist ad list..." 
+	curl -s http://www.malwaredomainlist.com/hostslist/hosts.txt | grep -v "#" | sed '/^$/d' | sed 's/\ /\\ /g' | \
+		 awk '{print $3}' | grep -v '^\\' | grep -v '\\$' | sort -u > $TEMPHOSTDIR/host.mwd.new
+
+        if zcat $PERSISTENTHOSTDIR/host.mwd.gz | cmp $TEMPHOSTDIR/host.mwd.new; then 
+                logger "no changes"
+                mv -f $TEMPHOSTDIR/host.mwd.new $TEMPHOSTDIR/host.mwd
+	fi
+
+	logger "Updating adblock.gjtech ad list..." 
+	curl -s http://adblock.gjtech.net/?format=unix-hosts | grep -v "#" | sed '/^$/d' | sed 's/\ /\\ /g' | \
+		awk '{print $2}' | grep -v '^\\' | grep -v '\\$' | sort -u > $TEMPHOSTDIR/host.gjtech.new
+
+        if zcat $PERSISTENTHOSTDIR/host.gjtech.gz | cmp $TEMPHOSTDIR/host.gjtech.new; then
+                logger "no changes"
+                mv -f $TEMPHOSTDIR/host.gjtech.new $TEMPHOSTDIR/host.gjtech
+        fi
+
+	logger "Updating someone who cares ad list..." 
+	curl -s http://someonewhocares.org/hosts/hosts | grep -v "#" | sed '/^$/d' | sed 's/\ /\\ /g' | \
+		grep -v '^\\' | grep -v '\\$' | awk '{print $2}' | grep -v '^\\' | grep -v '\\$' | sort -u > $TEMPHOSTDIR/host.sowc.new
+
+	if zcat $PERSISTENTHOSTDIR/host.sowc.gz | cmp $TEMPHOSTDIR/host.sowc.new; then
+                logger "no changes"
+                mv -f $TEMPHOSTDIR/host.sowc.new $TEMPHOSTDIR/host.sowc
+        fi
+
+	# Save updated host files in persistent mem
+	# and prepare it in $TEMPHOSTDIR for dnsmasq
+	for f in $(ls -1 $TEMPHOSTDIR/*.new 2> /dev/null ); do
+		logger "Host file $f has changed...saving it persistently" 
+		cat $f | gzip -c > $PERSISTENTHOSTDIR/$(basename $f .new).gz
+		cat $f | awk '{print "'$ENDPOINT_IP4'", $0}' > $TEMPHOSTDIR/$(basename $f .new)
+  		rm $f
+	done
+}
+
+signal_dnsmasq() {
+	if ps -w | grep dns[m]asq; then
+		killall -HUP dnsmasq
+	else
+		/etc/init.d/dnsmasq restart
+	fi
+}
+
+boot() {
+	logger "install iptable rules to force dnsmasq routing for port 53 queries"
+	# route every DNS query through dnsmasq
+	iptables -t nat -A PREROUTING -i br-lan -p tcp --dport 53 -j DNAT --to 192.168.1.1
+	iptables -t nat -A PREROUTING -i br-lan -p udp --dport 53 -j DNAT --to 192.168.1.1
+
+	logger "make sure host directories exist"
+	mkdir -p $PERSISTENTHOSTDIR
+	mkdir -p $TEMPHOSTDIR
+}
+
+restart() {
+	start
+}
+
+reload() {
+	logger "Force online retrieval of host files"
+        update_hostfiles
+	signal_dnsmasq
+}
+
+
+start () {
+	logger "Start and activate dnsmasq blocking of ads and porn sites"
+	unpack_local_hostfiles
+	update_hostfiles
+	signal_dnsmasq
+}
