@@ -1,7 +1,7 @@
 #!/bin/sh /etc/rc.common
 
 # make sure this script is started AFTER the start of dnsmasq
-START=65
+START=66
 
 #ENDPOINT_IP4=$(uci get network.lan.ipaddr)
 ENDPOINT_IP4="0.0.0.0"
@@ -14,12 +14,19 @@ unpack_local_hostfiles() {
 		if test -e $PERSISTENTHOSTDIR/$(basename $f .gz); then
 			logger "Linking persistent host file $f to $TEMPHOSTDIR and updating zip file"
 			ln -sf $PERSISTENTHOSTDIR/$(basename $f .gz) $TEMPHOSTDIR/$(basename $f .gz)
-			cat $PERSISTENTHOSTDIR/$(basename $f .gz) | awk '{print $2}' | gzip -c > $f
+			#cat $PERSISTENTHOSTDIR/$(basename $f .gz) | awk '{print $2}' | gzip -c > $f
 		else
 			logger "Unpacking persistent host file $f to $TEMPHOSTDIR"
-			zcat -f $f | awk '{print "'$ENDPOINT_IP4'", $0}' > $TEMPHOSTDIR/$(basename $f .gz)
+			zcat $f | awk '{print "'$ENDPOINT_IP4'", $0}' > $TEMPHOSTDIR/$(basename $f .gz)
 		fi
 	done
+}
+
+delete_if_unchanged() {
+	if zcat $PERSISTENTHOSTDIR/$1.gz | cmp $TEMPHOSTDIR/$1.new; then
+		logger "no changes"
+		rm $TEMPHOSTDIR/$1.new
+	fi
 }
 
 update_hostfiles() {
@@ -29,10 +36,7 @@ update_hostfiles() {
 	logger "Updating yoyo ad list..." 
 	curl -s -d mimetype=plaintext -d hostformat=unixhosts http://pgl.yoyo.org/adservers/serverlist.php? | sort -u > $TEMPHOSTDIR/host.yoyo.new
 
-	if zcat $PERSISTENTHOSTDIR/host.yoyo.gz | cmp $TEMPHOSTDIR/host.yoyo.new; then
-		logger "no changes"
-		mv -f $TEMPHOSTDIR/host.yoyo.new $TEMPHOSTDIR/host.yoyo
-	fi
+	delete_if_unchanged "host.yoyo"
 
 	logger "Updating winhelp2002 ad list..." 
 	curl -s http://winhelp2002.mvps.org/hosts.txt   | \
@@ -40,55 +44,37 @@ update_hostfiles() {
 		grep -v localhost | tr -d '\r' | tr -s '\t' | \
 		tr -d '\015' | sort -u > $TEMPHOSTDIR/host.mvps.new
 
-	if zcat $PERSISTENTHOSTDIR/host.mvps.gz | cmp $TEMPHOSTDIR/host.mvps.new; then
-		logger "no changes"
-		mv -f $TEMPHOSTDIR/host.mvps.new $TEMPHOSTDIR/host.mvps
-	fi
+	delete_if_unchanged "host.mvps"
 
 	logger "Updating adaway ad list..." 
 	curl -s https://adaway.org/hosts.txt | grep -v "#" | grep -v "::1" | sed '/^$/d' | sed 's/\ /\\ /g' | \
 		awk '{print $2}' | grep -v '^\\' | grep -v '\\$' | sort -u > $TEMPHOSTDIR/host.adaway.new
 
-	if zcat $PERSISTENTHOSTDIR/host.adaway.gz | cmp $TEMPHOSTDIR/host.adaway.new; then
-                logger "no changes"
-                mv -f $TEMPHOSTDIR/host.adaway.new $TEMPHOSTDIR/host.adaway
-        fi
+	delete_if_unchanged "host.adaway"
 
-#	logger "Updating hosts-file ad list..." 
-#	curl -s http://hosts-file.net/.%5Cad_servers.txt | grep -v "#" | grep -v "::1" | sed '/^$/d' | \
-#		sed 's/\ /\\ /g' | awk '{print $2}' | grep -v '^\\' | grep -v '\\$' | sort -u > $TEMPHOSTDIR/host.hfnet.new
-#
-#        if zcat $PERSISTENTHOSTDIR/host.hfnet.gz | cmp $TEMPHOSTDIR/host.hfnet.new; then
-#                logger "no changes" 
-#                mv -f $TEMPHOSTDIR/host.hfnet.new $TEMPHOSTDIR/host.hfnet
-#        fi
+	logger "Updating hosts-file ad list..." 
+	curl -s http://hosts-file.net/.%5Cad_servers.txt | grep -v "#" | grep -v "::1" | sed '/^$/d' | \
+		sed 's/\ /\\ /g' | awk '{print $2}' | grep -v '^\\' | grep -v '\\$' | sort -u > $TEMPHOSTDIR/host.hfnet.new
+
+	delete_if_unchanged "host.hfnet"
 
 	logger "Updating malwaredomainlist ad list..." 
 	curl -s http://www.malwaredomainlist.com/hostslist/hosts.txt | grep -v "#" | sed '/^$/d' | sed 's/\ /\\ /g' | \
 		 awk '{print $3}' | grep -v '^\\' | grep -v '\\$' | sort -u > $TEMPHOSTDIR/host.mwd.new
 
-        if zcat $PERSISTENTHOSTDIR/host.mwd.gz | cmp $TEMPHOSTDIR/host.mwd.new; then 
-                logger "no changes"
-                mv -f $TEMPHOSTDIR/host.mwd.new $TEMPHOSTDIR/host.mwd
-	fi
+	delete_if_unchanged "host.mwd"
 
 	logger "Updating adblock.gjtech ad list..." 
 	curl -s http://adblock.gjtech.net/?format=unix-hosts | grep -v "#" | sed '/^$/d' | sed 's/\ /\\ /g' | \
 		awk '{print $2}' | grep -v '^\\' | grep -v '\\$' | sort -u > $TEMPHOSTDIR/host.gjtech.new
 
-        if zcat $PERSISTENTHOSTDIR/host.gjtech.gz | cmp $TEMPHOSTDIR/host.gjtech.new; then
-                logger "no changes"
-                mv -f $TEMPHOSTDIR/host.gjtech.new $TEMPHOSTDIR/host.gjtech
-        fi
+	delete_if_unchanged "host.gjtech"
 
 	logger "Updating someone who cares ad list..." 
 	curl -s http://someonewhocares.org/hosts/hosts | grep -v "#" | sed '/^$/d' | sed 's/\ /\\ /g' | \
 		grep -v '^\\' | grep -v '\\$' | awk '{print $2}' | grep -v '^\\' | grep -v '\\$' | sort -u > $TEMPHOSTDIR/host.sowc.new
 
-	if zcat $PERSISTENTHOSTDIR/host.sowc.gz | cmp $TEMPHOSTDIR/host.sowc.new; then
-                logger "no changes"
-                mv -f $TEMPHOSTDIR/host.sowc.new $TEMPHOSTDIR/host.sowc
-        fi
+	delete_if_unchanged "host.sowc"
 
 	# Save updated host files in persistent mem
 	# and prepare it in $TEMPHOSTDIR for dnsmasq
@@ -117,6 +103,8 @@ boot() {
 	logger "make sure host directories exist"
 	mkdir -p $PERSISTENTHOSTDIR
 	mkdir -p $TEMPHOSTDIR
+
+	start
 }
 
 restart() {
@@ -126,7 +114,7 @@ restart() {
 reload() {
 	logger "Force online retrieval of host files"
         update_hostfiles
-	signal_dnsmasq
+	#signal_dnsmasq
 }
 
 
@@ -134,5 +122,5 @@ start () {
 	logger "Start and activate dnsmasq blocking of ads and porn sites"
 	unpack_local_hostfiles
 	update_hostfiles
-	signal_dnsmasq
+	#signal_dnsmasq
 }
