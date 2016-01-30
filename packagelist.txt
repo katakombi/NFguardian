@@ -57,6 +57,6 @@ luci-proto-ipv6
 luci-proto-ppp
 luci-ssl
 luci-theme-bootstrap
-# add gnu sort uses far less ram
-# which is needed for the inithost script
+# add gnu sort - it uses far less ram
+# it is needed for the inithost script
 coreutils-sort

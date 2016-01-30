@@ -2,7 +2,8 @@
 
 # config
 PROFILE="TLWR1043"
-PACKAGELIST=$(cat packagelist.txt | grep -v '#' | tr -s '\n' ' ')
+PACKAGES=$(cat packagelist.txt | grep -v '#' | tr -s '\n' ' ')
+FILES="$PWD/files"
 
 
 # download image builder for the ar71xx platform
@@ -22,4 +23,4 @@ fi
 
 cd OpenWrt-ImageBuilder-15.05-ar71xx-generic.Linux-x86_64
 make clean
-make image PROFILE="$PROFILE" PACKAGES="$PACKAGELIST" FILES=../files
+make image PROFILE="$PROFILE" PACKAGES="$PACKAGES" FILES="$FILES"
