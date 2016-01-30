@@ -1,8 +1,8 @@
-# AntipornRouter-Light
+# NFguardian
 
 Description
 
-OpenWrt setup for wifi router TP-WR 1043 ND v1 customized to block out malicious sites (ads/porn/...)
+OpenWrt setup for wifi router TP-WR 1043 ND v1 customized to block out malicious sites (ads & porn)
 
 Details
 * sites are being blocked through DNS using host files 
