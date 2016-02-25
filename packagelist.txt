@@ -60,3 +60,4 @@ luci-theme-bootstrap
 # add gnu sort - it uses far less ram
 # it is needed for the inithost script
 coreutils-sort
+# coreutils-stat can be replaced by date
