@@ -3,124 +3,98 @@
 # make sure this script is started AFTER the start of dnsmasq
 START=66
 
-#ENDPOINT_IP4=$(uci get network.lan.ipaddr)
-ENDPOINT_IP4="0.0.0.0"
+#!/bin/sh
 
-PERSISTENTHOSTDIR=/usr/share/inithost
-TEMPHOSTDIR=/tmp/hosts
+# source the configuration
+source "/etc/inithost.cfg"
 
-unpack_local_hostfiles() {
-	for f in $(ls -1 $PERSISTENTHOSTDIR/*.gz) ; do
-		if test -e $PERSISTENTHOSTDIR/$(basename $f .gz); then
-			logger "Linking persistent host file $f to $TEMPHOSTDIR and updating zip file"
-			ln -sf $PERSISTENTHOSTDIR/$(basename $f .gz) $TEMPHOSTDIR/$(basename $f .gz)
-			#cat $PERSISTENTHOSTDIR/$(basename $f .gz) | awk '{print $2}' | gzip -c > $f
-		else
-			logger "Unpacking persistent host file $f to $TEMPHOSTDIR"
-			zcat $f | awk '{print "'$ENDPOINT_IP4'", $0}' > $TEMPHOSTDIR/$(basename $f .gz)
-		fi
-	done
+###
+### Functions                                                                                                
+###
+
+
+### restore_persistent_hostfiles
+# this function is used prior to any internet accessability
+# and will install any persistently saved host files
+# this will circumvent users to reboot the router and prevent internet connectivity
+# in order to disable DNS blockage
+restore_persistent_hostfiles() {
+	# FIXME I did crap there!
+        for f in $(ls -1 $PERSISTENTDIR/*.gz) ; do
+                # link all host files (symlinks and real host files) to $ACTIVEHOSTDIR
+                # host files in gz format get decompressed and written to the corresponding
+                # files/symlinks in $PERSISTENTDIR
+                if test -e $PERSISTENTDIR/$(basename $f .gz); then
+                        logger "Linking persistent host file $f to $ACTIVEHOSTDIR"
+                        ln -sf $PERSISTENTDIR/$(basename $f .gz) $ACTIVEHOSTDIR/$(basename $f .gz)
+                fi
+                logger "Unpacking persistent host file $f to $PERSISTENTDIR"
+                zcat $f | awk '{print "'$ENDPOINT_IP4'", $0}' > $PERSISTENTDIR/$(basename $f .gz)
+        done
 }
 
-delete_if_unchanged() {
-	if zcat $PERSISTENTHOSTDIR/$1.gz | cmp $TEMPHOSTDIR/$1.new; then
-		logger "no changes"
-		rm $TEMPHOSTDIR/$1.new
-	fi
+### save_persistent_hostfiles
+# this function is used after an update from a remote host file
+# and will update the permanently stored compressed host files
+# it will check for *.gz files in $PERSISTENTDIR and update just those
+save_persistent_hostfiles() {
+        for f in $(ls -1 $PERSISTENTDIR/*.gz) ; do                                              
+                # update all existing compressed host files from their corresponding files/symlinks 
+                if test -e $PERSISTENTDIR/$(basename $f .gz); then                         
+                        logger "Compressing updated host files" 
+			cat $PERSISTENTDIR/$(basename $f .gz) | awk '{print $(NF-1)}' | gzip -c > $f
+                fi
+        done
 }
 
-update_hostfiles() {
-
-	# TODO if internet is connected retrieve a better porn host file from internet, too
-
-	logger "Updating yoyo ad list..." 
-	curl -s -d mimetype=plaintext -d hostformat=unixhosts http://pgl.yoyo.org/adservers/serverlist.php? | sort -u > $TEMPHOSTDIR/host.yoyo.new
-
-	delete_if_unchanged "host.yoyo"
-
-	logger "Updating winhelp2002 ad list..." 
-	curl -s http://winhelp2002.mvps.org/hosts.txt   | \
-		grep 0.0.0.0 | sed 's/[[:space:]]*#.*$//g'  | \
-		grep -v localhost | tr -d '\r' | tr -s '\t' | \
-		tr -d '\015' | sort -u > $TEMPHOSTDIR/host.mvps.new
-
-	delete_if_unchanged "host.mvps"
-
-	logger "Updating adaway ad list..." 
-	curl -s https://adaway.org/hosts.txt | grep -v "#" | grep -v "::1" | sed '/^$/d' | sed 's/\ /\\ /g' | \
-		awk '{print $2}' | grep -v '^\\' | grep -v '\\$' | sort -u > $TEMPHOSTDIR/host.adaway.new
-
-	delete_if_unchanged "host.adaway"
-
-	logger "Updating hosts-file ad list..." 
-	curl -s http://hosts-file.net/.%5Cad_servers.txt | grep -v "#" | grep -v "::1" | sed '/^$/d' | \
-		sed 's/\ /\\ /g' | awk '{print $2}' | grep -v '^\\' | grep -v '\\$' | sort -u > $TEMPHOSTDIR/host.hfnet.new
-
-	delete_if_unchanged "host.hfnet"
-
-	logger "Updating malwaredomainlist ad list..." 
-	curl -s http://www.malwaredomainlist.com/hostslist/hosts.txt | grep -v "#" | sed '/^$/d' | sed 's/\ /\\ /g' | \
-		 awk '{print $3}' | grep -v '^\\' | grep -v '\\$' | sort -u > $TEMPHOSTDIR/host.mwd.new
-
-	delete_if_unchanged "host.mwd"
-
-	logger "Updating adblock.gjtech ad list..." 
-	curl -s http://adblock.gjtech.net/?format=unix-hosts | grep -v "#" | sed '/^$/d' | sed 's/\ /\\ /g' | \
-		awk '{print $2}' | grep -v '^\\' | grep -v '\\$' | sort -u > $TEMPHOSTDIR/host.gjtech.new
-
-	delete_if_unchanged "host.gjtech"
-
-	logger "Updating someone who cares ad list..." 
-	curl -s http://someonewhocares.org/hosts/hosts | grep -v "#" | sed '/^$/d' | sed 's/\ /\\ /g' | \
-		grep -v '^\\' | grep -v '\\$' | awk '{print $2}' | grep -v '^\\' | grep -v '\\$' | sort -u > $TEMPHOSTDIR/host.sowc.new
-
-	delete_if_unchanged "host.sowc"
-
-	# Save updated host files in persistent mem
-	# and prepare it in $TEMPHOSTDIR for dnsmasq
-	for f in $(ls -1 $TEMPHOSTDIR/*.new 2> /dev/null ); do
-		logger "Host file $f has changed...saving it persistently" 
-		cat $f | gzip -c > $PERSISTENTHOSTDIR/$(basename $f .new).gz
-		cat $f | awk '{print "'$ENDPOINT_IP4'", $0}' > $TEMPHOSTDIR/$(basename $f .new)
-  		rm $f
-	done
+### last_mtime
+# helper function to check the last modification time of the remote host file and 
+# $1 -- URL to the remote host file
+# returns a time stamp, if not accessible it returns -1
+last_mtime() {
+        curl -sI $1 | awk '/^HTTP\//{if ($2!=200) exit(1)}/^Last-Modified:/{$1="";mtime=$0}END{print mtime}' |\
+        awk 'BEGIN{split("Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec",m); for (i in m) {mn[m[i]]=i}}
+             {hhmmss=gensub(/:/," ","g",$5);print mktime(""$4" "mn[$3]" "$2" "hhmmss)}'
 }
 
+### signal_dnsmasq
+# Signals a running dnsmasq instance to re-read host files contained in $ACTIVEHOSTDIR
+# If dnsmasq is not running it will be restarted
+# Run this once after finishing all 'update_active_host_file' calls
 signal_dnsmasq() {
-	if ps -w | grep dns[m]asq; then
-		killall -HUP dnsmasq
-	else
-		/etc/init.d/dnsmasq restart
-	fi
+        if ps -w | grep dns[m]asq; then
+                killall -HUP dnsmasq
+        else
+                /etc/init.d/dnsmasq restart
+        fi
 }
 
 boot() {
-	logger "install iptable rules to force dnsmasq routing for port 53 queries"
-	# route every DNS query through dnsmasq
-	iptables -t nat -A PREROUTING -i br-lan -p tcp --dport 53 -j DNAT --to 192.168.1.1
-	iptables -t nat -A PREROUTING -i br-lan -p udp --dport 53 -j DNAT --to 192.168.1.1
+        logger "install iptable rules to force dnsmasq routing for port 53 queries"
+        # route every DNS query through dnsmasq
+        iptables -t nat -A PREROUTING -i br-lan -p tcp --dport 53 -j DNAT --to 192.168.1.1
+        iptables -t nat -A PREROUTING -i br-lan -p udp --dport 53 -j DNAT --to 192.168.1.1
 
-	logger "make sure host directories exist"
-	mkdir -p $PERSISTENTHOSTDIR
-	mkdir -p $TEMPHOSTDIR
-
-	start
+        logger "make sure host directories exist"
+        mkdir -p $PERSISTENTDIR
+        mkdir -p $ACTIVEHOSTDIR
+        start
 }
 
 restart() {
-	start
+        start
 }
 
 reload() {
-	logger "Force online retrieval of host files"
+        logger "Force online retrieval of host files"
         update_hostfiles
-	#signal_dnsmasq
 }
 
 
-start () {
-	logger "Start and activate dnsmasq blocking of ads and porn sites"
-	unpack_local_hostfiles
-	update_hostfiles
-	#signal_dnsmasq
+start() {
+        logger "Start and activate dnsmasq blocking of ads and porn sites"
+        unpack_local_hostfiles
+        update_hostfiles
 }
+
+
