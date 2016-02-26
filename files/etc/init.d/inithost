@@ -3,8 +3,6 @@
 # make sure this script is started AFTER the start of dnsmasq
 START=66
 
-#!/bin/sh
-
 # source the configuration
 source "/etc/inithost.cfg"
 
@@ -18,14 +16,15 @@ source "/etc/inithost.cfg"
 # and will install any persistently saved host files
 # this will circumvent users to reboot the router and prevent internet connectivity
 # in order to disable DNS blockage
+# it will check for *.gz files in $PERSISTENTDIR and unpack just those
 restore_persistent_hostfiles() {
-	# FIXME I did crap there!
         for f in $(ls -1 $PERSISTENTDIR/*.gz) ; do
                 # link all host files (symlinks and real host files) to $ACTIVEHOSTDIR
                 # host files in gz format get decompressed and written to the corresponding
                 # files/symlinks in $PERSISTENTDIR
                 if test -e $PERSISTENTDIR/$(basename $f .gz); then
-                        logger "Linking persistent host file $f to $ACTIVEHOSTDIR"
+			# TODO check whether that host file is a link to $ACTIVEHOSTDIR already 
+                        logger "Linking $ACTIVEHOSTDIR/ to persistent host file"
                         ln -sf $PERSISTENTDIR/$(basename $f .gz) $ACTIVEHOSTDIR/$(basename $f .gz)
                 fi
                 logger "Unpacking persistent host file $f to $PERSISTENTDIR"
@@ -41,7 +40,7 @@ save_persistent_hostfiles() {
         for f in $(ls -1 $PERSISTENTDIR/*.gz) ; do                                              
                 # update all existing compressed host files from their corresponding files/symlinks 
                 if test -e $PERSISTENTDIR/$(basename $f .gz); then                         
-                        logger "Compressing updated host files" 
+                        logger "Compressing updated host file to $f" 
 			cat $PERSISTENTDIR/$(basename $f .gz) | awk '{print $(NF-1)}' | gzip -c > $f
                 fi
         done
