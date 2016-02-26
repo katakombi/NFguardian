@@ -57,6 +57,15 @@ last_mtime() {
              {hhmmss=gensub(/:/," ","g",$5);print mktime(""$4" "mn[$3]" "$2" "hhmmss)}'
 }
 
+update_dnsmasq_cfg() {
+	cp -a /etc/dnsmasq.conf /etc/dnsmasq.conf.bak
+	# TODO find a suitable mechanism to modify /etc/dnsmasq.conf
+	cat /etc/dnsmasq.conf | awk '/^address=\/..*\/[[:digit:]]([[:digit:]]|\.|\:)*$/{next}{print}'
+	logger "Rewriting using address rules from $RULESDIR..."
+	# append all rules in all files contained in this dir using $IPV4_ENDPOINT... 
+	# TODO whitelist support
+}
+
 ### signal_dnsmasq
 # Signals a running dnsmasq instance to re-read host files contained in $ACTIVEHOSTDIR
 # If dnsmasq is not running it will be restarted
