@@ -108,14 +108,14 @@ restart() {
 
 reload() {
         logger "Force online retrieval of host files"
-        update_hostfiles
+        update_host_files_from_web
 }
 
 
 start() {
         logger "Start and activate dnsmasq blocking of ads and porn sites"
         unpack_local_hostfiles
-        update_hostfiles
+        update_host_files_from_web
 }
 
 
