@@ -14,22 +14,34 @@ source "/etc/inithost.cfg"
 ### restore_persistent_hostfiles
 # this function is used prior to any internet accessability
 # and will install any persistently saved host files
-# this will circumvent users to reboot the router and prevent internet connectivity
+# this will circumvent users to reboot the router with internet disconnected
 # in order to disable DNS blockage
-# it will check for *.gz files in $PERSISTENTDIR and unpack just those
+# it will check for <hname>.gz in $PERSISTENTDIR and unpack those to $ACTIVEHOSTDIR/<hname>
+# since <hname> can be a symlink the file may be stored elsewhere
 restore_persistent_hostfiles() {
         for f in $(ls -1 $PERSISTENTDIR/*.gz) ; do
                 # link all host files (symlinks and real host files) to $ACTIVEHOSTDIR
                 # host files in gz format get decompressed and written to the corresponding
                 # files/symlinks in $PERSISTENTDIR
-                if test -e $PERSISTENTDIR/$(basename $f .gz); then
-			# TODO check whether that host file is a link to $ACTIVEHOSTDIR already 
-                        logger "Linking $ACTIVEHOSTDIR/ to persistent host file"
-                        ln -sf $PERSISTENTDIR/$(basename $f .gz) $ACTIVEHOSTDIR/$(basename $f .gz)
-                fi
-                logger "Unpacking persistent host file $f to $PERSISTENTDIR"
-                zcat $f | awk '{print "'$ENDPOINT_IP4'", $0}' > $PERSISTENTDIR/$(basename $f .gz)
-        done
+		hfn=$(basename $f .gz)
+                if test -e $PERSISTENTDIR/$hfn; then
+			if [ cmp $PERSISTENTDIR/$hfn $ACTIVEHOSTDIR/$hfn ]; then
+                                logger "Linking $ACTIVEHOSTDIR/$hfn to persistent host file $PERSISTENTDIR/$hfn"
+                                ln -sf $PERSISTENTDIR/$hfn $ACTIVEHOSTDIR/$hfn
+			else
+				logger "$PERSISTENTDIR/$hfn is already a symlink to $ACTIVEHOSTDIR/$hfn"
+			fi
+                        logger "Unpacking persistent host file $f to $PERSISTENTDIR/$hfn"
+                        zcat $f | awk '
+		          BEGIN{
+			    while (readline<"'$HOSTWHITELIST'"){wl[$1]=1}
+                          }
+                          NF==1{
+                            if (!($1~wl))
+                              print '$ENDPOINT_IPV4',$0;
+                          }' > $PERSISTENTDIR/$(basename $f .gz)
+		  fi
+	  done
 }
 
 ### save_persistent_hostfiles
@@ -56,12 +68,13 @@ last_mtime() {
              {hhmmss=gensub(/:/," ","g",$5);print mktime(""$4" "mn[$3]" "$2" "hhmmss)}'
 }
 
+### update_dnsmasq_cfg
+# copy the tld mask rules from $RULESDIR and filter the whitelisted ones
 update_dnsmasq_cfg() {
-	cp -a /etc/dnsmasq.conf /etc/dnsmasq.conf.bak
-	# TODO find a suitable mechanism to modify /etc/dnsmasq.conf
-	cat /etc/dnsmasq.conf | awk '/^address=\/..*\/[[:digit:]]([[:digit:]]|\.|\:)*$/{next}{print}'
 	logger "Rewriting using address rules from $RULESDIR..."
-	# append all rules in all files contained in this dir using $IPV4_ENDPOINT... 
+	for f in $(ls -1 $RULESDIR/*) ; do
+		cat $f | awk '{print "address=/"$1"/"'$ENDPOINT_IPV4'}' > /tmp/dnsmasq.d/$(basename $f)
+	done
 	# TODO whitelist support
 }
 
@@ -106,3 +119,5 @@ start() {
 }
 
 
+# TODO that's how to get yoyo dnsmasq tld ruleset... check if those can be more useful...
+# wget -O /etc/dnsmasq.d/adblock.conf "http://pgl.yoyo.org/adservers/serverlist.php?hostformat=dnsmasq&showintro=0&mimetype=plaintext" && service dnsmasq restart
