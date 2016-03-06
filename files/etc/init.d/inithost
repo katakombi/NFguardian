@@ -81,7 +81,7 @@ update_dnsmasq_cfg() {
 ### signal_dnsmasq
 # Signals a running dnsmasq instance to re-read host files contained in $ACTIVEHOSTDIR
 # If dnsmasq is not running it will be restarted
-# Run this once after finishing all 'update_active_host_file' calls
+# Run this once after finishing all 'update_active_hostfile' (/etc/inithost.cfg) calls
 signal_dnsmasq() {
         if ps -w | grep dns[m]asq; then
                 killall -HUP dnsmasq
@@ -99,25 +99,35 @@ boot() {
         logger "make sure host directories exist"
         mkdir -p $PERSISTENTDIR
         mkdir -p $ACTIVEHOSTDIR
-        start
 }
 
 restart() {
-        start
+	stop
+	start
 }
 
 reload() {
-        logger "Force online retrieval of host files"
-        update_host_files_from_web
+	logger "Equivalent to restart..."
+        restart
 }
 
 
 start() {
         logger "Start and activate dnsmasq blocking of ads and porn sites"
-        unpack_local_hostfiles
-        update_host_files_from_web
+        restore_persistent_hostfiles
+	logger "Activate persistent host files..."
+	signal_dnsmasq
+	logger "Retrieve updated host files from web..."
+        update_hostfiles_from_web
+	signal_dnsmasq
+	logger "...done"
 }
 
+stop() {
+        logger "Make updated host settings persistent..."
+        save_persistent_hostfiles
+	logger "...done"
+}
 
 # TODO that's how to get yoyo dnsmasq tld ruleset... check if those can be more useful...
 # wget -O /etc/dnsmasq.d/adblock.conf "http://pgl.yoyo.org/adservers/serverlist.php?hostformat=dnsmasq&showintro=0&mimetype=plaintext" && service dnsmasq restart
