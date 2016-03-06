@@ -24,22 +24,21 @@ restore_persistent_hostfiles() {
                 # host files in gz format get decompressed and written to the corresponding
                 # files/symlinks in $PERSISTENTDIR
 		hfn=$(basename $f .gz)
-                if test -e $PERSISTENTDIR/$hfn; then
-			if [ cmp $PERSISTENTDIR/$hfn $ACTIVEHOSTDIR/$hfn ]; then
+                if [ -e $PERSISTENTDIR/$hfn ]; then
+			if cmp $PERSISTENTDIR/$hfn $ACTIVEHOSTDIR/$hfn ; then
+				logger "$PERSISTENTDIR/$hfn is already a symlink to $ACTIVEHOSTDIR/$hfn"
+			else	
                                 logger "Linking $ACTIVEHOSTDIR/$hfn to persistent host file $PERSISTENTDIR/$hfn"
                                 ln -sf $PERSISTENTDIR/$hfn $ACTIVEHOSTDIR/$hfn
-			else
-				logger "$PERSISTENTDIR/$hfn is already a symlink to $ACTIVEHOSTDIR/$hfn"
 			fi
                         logger "Unpacking persistent host file $f to $PERSISTENTDIR/$hfn"
                         zcat $f | awk '
 		          BEGIN{
-			    while (readline<"'$HOSTWHITELIST'"){wl[$1]=1}
+			    while (getline<"'$HOSTWHITELIST'"){wl[$1]=1}
                           }
-                          NF==1{
-                            if (!($1~wl))
-                              print '$ENDPOINT_IPV4',$0;
-                          }' > $PERSISTENTDIR/$(basename $f .gz)
+                          {
+                            if (!($1 in wl)) { print "'$ENDPOINT_IP4'",$1 };
+                          }' > $PERSISTENTDIR/$hfn
 		  fi
 	  done
 }
@@ -49,10 +48,10 @@ restore_persistent_hostfiles() {
 # and will update the permanently stored compressed host files
 # it will check for *.gz files in $PERSISTENTDIR and update just those
 save_persistent_hostfiles() {
-        for f in $(ls -1 $PERSISTENTDIR/*.gz) ; do                                              
-                # update all existing compressed host files from their corresponding files/symlinks 
-                if test -e $PERSISTENTDIR/$(basename $f .gz); then                         
-                        logger "Compressing updated host file to $f" 
+        for f in $(ls -1 $PERSISTENTDIR/*.gz) ; do 
+                # update all existing compressed host files from their corresponding files/symlinks
+                if test -e $PERSISTENTDIR/$(basename $f .gz); then
+                        logger "Compressing updated host file to $f"
 			cat $PERSISTENTDIR/$(basename $f .gz) | awk '{print $(NF-1)}' | gzip -c > $f
                 fi
         done
@@ -73,7 +72,7 @@ last_mtime() {
 update_dnsmasq_cfg() {
 	logger "Rewriting using address rules from $RULESDIR..."
 	for f in $(ls -1 $RULESDIR/*) ; do
-		cat $f | awk '{print "address=/"$1"/"'$ENDPOINT_IPV4'}' > /tmp/dnsmasq.d/$(basename $f)
+		cat $f | awk '{print "address=/"$1"/"'$ENDPOINT_IP4'}' > /tmp/dnsmasq.d/$(basename $f)
 	done
 	# TODO whitelist support
 }
