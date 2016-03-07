@@ -52,7 +52,7 @@ save_persistent_hostfiles() {
                 # update all existing compressed host files from their corresponding files/symlinks
                 if test -e $PERSISTENTDIR/$(basename $f .gz); then
                         logger "Compressing updated host file to $f"
-			cat $PERSISTENTDIR/$(basename $f .gz) | awk '{print $(NF-1)}' | gzip -c > $f
+			cat $PERSISTENTDIR/$(basename $f .gz) | awk '{print $NF}' | gzip -c > $f
                 fi
         done
 }
