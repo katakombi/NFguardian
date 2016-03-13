@@ -10,6 +10,23 @@ source "/etc/inithost.cfg"
 ### Functions                                                                                                
 ###
 
+### unpack_hostfile
+# unpacks an persistent, compressed host file thus
+# preparing it for usage as an dnsmasq host file
+# 1. filters out the whitelisted items
+# 2. sorts it and removes duplicates
+# 3. adds the redirection IP
+unpack_hostfile() {
+        zcat $1 | sort -u | filter_whitelist
+}
+
+### is_hostfile_consistent
+# this function checks whether the persistent host file under
+# $PERSISTENTDIR and its corresponding compressed gz file
+# contain consistent context or not
+is_hostfile_consistent() {
+        unpack_hostfile "$PERSISTENTDIR/$1.gz" | cmp - "$PERSISTENTDIR/$1"
+}
 
 ### restore_persistent_hostfiles
 # this function is used prior to any internet accessability
@@ -24,22 +41,18 @@ restore_persistent_hostfiles() {
                 # host files in gz format get decompressed and written to the corresponding
                 # files/symlinks in $PERSISTENTDIR
 		hfn=$(basename $f .gz)
-                if [ -e $PERSISTENTDIR/$hfn ]; then
-			if cmp $PERSISTENTDIR/$hfn $ACTIVEHOSTDIR/$hfn ; then
-				logger "$PERSISTENTDIR/$hfn is already a symlink to $ACTIVEHOSTDIR/$hfn"
-			else	
-                                logger "Linking $ACTIVEHOSTDIR/$hfn to persistent host file $PERSISTENTDIR/$hfn"
-                                ln -sf $PERSISTENTDIR/$hfn $ACTIVEHOSTDIR/$hfn
-			fi
+		if [ "$(readlink $PERSISTENTDIR/$hfn)" == "$ACTIVEHOSTDIR/$hfn" ] ; then
+			logger "$PERSISTENTDIR/$hfn is already a symlink to $ACTIVEHOSTDIR/$hfn"
+		else	
+                        logger "Linking $ACTIVEHOSTDIR/$hfn to persistent host file $PERSISTENTDIR/$hfn"
+                        ln -sf $PERSISTENTDIR/$hfn $ACTIVEHOSTDIR/$hfn
+        	fi
+                if is_hostfile_consistent "$hfn" ; then
+                        logger "$PERSISTENTDIR/$hfn already consistent, no unpacking needed"
+                else
                         logger "Unpacking persistent host file $f to $PERSISTENTDIR/$hfn"
-                        zcat $f | awk '
-		          BEGIN{
-			    while (getline<"'$HOSTWHITELIST'"){wl[$1]=1}
-                          }
-                          {
-                            if (!($1 in wl)) { print "'$ENDPOINT_IP4'",$1 };
-                          }' > $PERSISTENTDIR/$hfn
-		  fi
+                        unpack_hostfile "$f" > $PERSISTENTDIR/$hfn
+                fi
 	  done
 }
 
@@ -51,8 +64,14 @@ save_persistent_hostfiles() {
         for f in $(ls -1 $PERSISTENTDIR/*.gz) ; do 
                 # update all existing compressed host files from their corresponding files/symlinks
                 if test -e $PERSISTENTDIR/$(basename $f .gz); then
-                        logger "Compressing updated host file to $f"
-			cat $PERSISTENTDIR/$(basename $f .gz) | awk '{print $NF}' | gzip -c > $f
+                        if is_hostfile_consistent "$(basename $f .gz)"; then
+                                logger "Skip $f, contents already consistent"
+                        else
+                                # TODO keep existing '#' comments and white listed items in orig gz
+                                # FIXME for now these get deleted
+                                logger "Compressing updated host file to $f"
+			        cat $PERSISTENTDIR/$(basename $f .gz) | awk '{print $NF}' | gzip -c > $f
+                        fi
                 fi
         done
 }
