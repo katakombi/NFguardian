@@ -2,6 +2,8 @@
 
 # make sure this script is started AFTER the start of dnsmasq
 START=66
+# make sure this script is stopped AFTER the shutdown of the network
+STOP=91
 
 # source the configuration
 source "/etc/inithost.cfg"
