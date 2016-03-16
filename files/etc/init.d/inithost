@@ -17,7 +17,7 @@ source "/etc/inithost.cfg"
 # 2. sorts it and removes duplicates
 # 3. adds the redirection IP
 unpack_hostfile() {
-        zcat $1 | sort -u | filter_whitelist
+        zcat $1 | filter_whitelist
 }
 
 ### is_hostfile_consistent
@@ -78,10 +78,10 @@ save_persistent_hostfiles() {
 
 ### last_mtime
 # helper function to check the last modification time of the remote host file and 
-# $1 -- URL to the remote host file
 # returns a time stamp, if not accessible it returns -1
+# $1 -- URL to the remote host file
 last_mtime() {
-        curl -sI $1 | awk '/^HTTP\//{if ($2!=200) exit(1)}/^Last-Modified:/{$1="";mtime=$0}END{print mtime}' |\
+        curl -m 20 -sI $1 | awk '/^HTTP\//{if ($2!=200) exit(1)}/^Last-Modified:/{$1="";mtime=$0}END{print mtime}' |\
         awk 'BEGIN{split("Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec",m); for (i in m) {mn[m[i]]=i}}
              {hhmmss=gensub(/:/," ","g",$5);print mktime(""$4" "mn[$3]" "$2" "hhmmss)}'
 }
