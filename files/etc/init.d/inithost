@@ -113,8 +113,9 @@ signal_dnsmasq() {
 boot() {
         logger "install iptable rules to force dnsmasq routing for port 53 queries"
         # route every DNS query through dnsmasq
-        iptables -t nat -A PREROUTING -i br-lan -p tcp --dport 53 -j DNAT --to 192.168.1.1
-        iptables -t nat -A PREROUTING -i br-lan -p udp --dport 53 -j DNAT --to 192.168.1.1
+        LAN_IP=$(uci get network.lan.ipaddr) # FIXME make fail safe
+        iptables -t nat -A PREROUTING -i br-lan -p tcp --dport 53 -j DNAT --to $LAN_IP
+        iptables -t nat -A PREROUTING -i br-lan -p udp --dport 53 -j DNAT --to $LAN_IP
 
         logger "make sure host directories exist"
         mkdir -p $PERSISTENTDIR
@@ -131,22 +132,30 @@ reload() {
         restart
 }
 
-
 start() {
         logger "Start and activate dnsmasq blocking of ads and porn sites"
         restore_persistent_hostfiles
 	logger "Activate persistent host files..."
 	signal_dnsmasq
-	logger "Retrieve updated host files from web..."
+        update
+}
+
+update() {
+        logger "Retrieve updated host files from web..."
         update_hostfiles_from_web
-	signal_dnsmasq
+        signal_dnsmasq
+        logger "...done"
+        logger "Make updated host settings persistent..."
+        save_persistent_hostfiles
 	logger "...done"
 }
 
 stop() {
-        logger "Make updated host settings persistent..."
-        save_persistent_hostfiles
-	logger "...done"
+        logger "Stopping host blocking..."
+        # TODO delete tmp host files
+        # shutdown dnsmasq if still running
+        # delete iptables rules
+        logger "...done"
 }
 
 # TODO that's how to get yoyo dnsmasq tld ruleset... check if those can be more useful...
