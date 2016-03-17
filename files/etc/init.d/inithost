@@ -120,6 +120,7 @@ boot() {
         logger "make sure host directories exist"
         mkdir -p $PERSISTENTDIR
         mkdir -p $ACTIVEHOSTDIR
+	start
 }
 
 restart() {
