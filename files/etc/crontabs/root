@@ -1,2 +1,2 @@
 @weekly wget -s https://katakombi@gmail.com:PWD@dynupdate.no-ip.com/nic/update?hostname=secret4u.ddns.net&myip=1.2.3.4
-@daily /etc/init.d/inithost update_host_files_from_web
+@daily /etc/init.d/inithost reload
