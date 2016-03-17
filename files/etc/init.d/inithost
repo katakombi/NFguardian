@@ -127,11 +127,6 @@ restart() {
 	start
 }
 
-reload() {
-	logger "Equivalent to restart..."
-        restart
-}
-
 start() {
         logger "Start and activate dnsmasq blocking of ads and porn sites"
         restore_persistent_hostfiles
@@ -140,7 +135,7 @@ start() {
         update
 }
 
-update() {
+reload() {
         logger "Retrieve updated host files from web..."
         update_hostfiles_from_web
         signal_dnsmasq
