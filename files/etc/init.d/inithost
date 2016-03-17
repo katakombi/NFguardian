@@ -27,7 +27,9 @@ unpack_hostfile() {
 # $PERSISTENTDIR and its corresponding compressed gz file
 # contain consistent context or not
 is_hostfile_consistent() {
-        unpack_hostfile "$PERSISTENTDIR/$1.gz" | cmp - "$PERSISTENTDIR/$1"
+        local CHKSUM1=$( unpack_hostfile "$PERSISTENTDIR/$1.gz" | md5sum | awk '{print $1}' )
+        local CHKSUM2=$( md5sum "$PERSISTENTDIR/$1" | awk '{print $1}' )
+        test $CHKSUM1 = $CHKSUM2
 }
 
 ### restore_persistent_hostfiles
