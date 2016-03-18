@@ -40,6 +40,9 @@ luci-app-ddns
 # add curl with ssl support
 # superiour to wget insofar as it can skip downloads based on modification time stamps
 curl
+# add wget with ssl support
+# needed for dyndns update TODO: replace using curl
+wget
 # add https webserver
 ca-certificates
 uhttpd
