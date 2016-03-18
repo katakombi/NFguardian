@@ -1,2 +1,2 @@
-@weekly wget -s https://katakombi@gmail.com:PWD@dynupdate.no-ip.com/nic/update?hostname=secret4u.ddns.net&myip=1.2.3.4
+@weekly /usr/bin/wget --no-check-certificate --user katakombi@gmail.com --password XXXX -S 'https://dynupdate.no-ip.com/nic/update?hostname=secret4u.ddns.net&myip=1.2.3.4' -O /dev/null
 @daily /etc/init.d/inithost reload
