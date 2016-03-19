@@ -135,7 +135,7 @@ start() {
         restore_persistent_hostfiles
 	logger "Activate persistent host files..."
 	signal_dnsmasq
-        update
+        reload
 }
 
 reload() {
