@@ -1,32 +1,67 @@
-# default ar71xx package list
+# default mvebu package list
 base-files 
+busybox 
+dnsmasq 
+dropbear 
+firewall 
+fstools 
+ip6tables 
+iptables 
+kernel 
+kmod-ata-core 
+kmod-ata-mvebu-ahci 
+kmod-gpio-button-hotplug 
+kmod-hwmon-tmp421 
+kmod-i2c-core 
+kmod-i2c-mv64xxx 
+kmod-leds-pca963x 
+kmod-ledtrig-usbdev 
+kmod-mwlwifi 
+kmod-nf-nathelper 
+kmod-rtc-armada38x 
+kmod-thermal-armada 
+kmod-usb-storage 
+kmod-usb2 
+kmod-usb3 
 libc 
 libgcc 
-busybox 
-dropbear 
 mtd 
-uci 
-opkg 
 netifd 
-fstools 
-kmod-gpio-button-hotplug 
-swconfig 
-kmod-ath9k 
-wpad-mini 
-uboot-envtools 
-dnsmasq 
-iptables 
-ip6tables 
+odhcp6c 
+odhcpd 
+opkg 
 ppp 
 ppp-mod-pppoe 
-kmod-nf-nathelper 
-firewall 
-odhcpd 
-odhcp6c
-# additional packages for TP-WR1043ND
-kmod-usb-core 
-kmod-usb2 
+swconfig 
+uboot-envtools 
+uci 
+wpad-mini
+kmod-mmc
+kmod-mvsdio 
+kmod-ata-marvell-sata
+kmod-rtc-marvell
+kmod-thermal-armada
+kmod-gpio-button-hotplug
+kmod-hwmon-tmp421
+kmod-hwmon-pwmfan
 kmod-ledtrig-usbdev
+# additional packages for Caiman
+kmod-usb2
+kmod-usb3
+kmod-usb-storage
+kmod-i2c-core
+kmod-i2c-mv64xxx
+kmod-ata-core
+kmod-ata-mvebu-ahci
+kmod-rtc-armada38x
+kmod-thermal-armada
+kmod-gpio-button-hotplug
+kmod-hwmon-tmp421
+kmod-leds-pca963x
+kmod-ledtrig-usbdev
+kmod-mwlwifi
+wpad-mini
+swconfig
 # remove PPP support since it is not needed
 -ppp
 -ppp-mod-pppoe
@@ -64,3 +99,12 @@ luci-theme-bootstrap
 # it is needed for the inithost script
 coreutils-sort
 # coreutils-stat can be replaced by date
+# dansguardian
+e2guardian
+# to encrypt SSD
+kmod-crypto-aes
+# to deal with disks
+fdisk
+fstools
+htop
+screen
