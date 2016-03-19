@@ -4,8 +4,8 @@
 # DOC http://hoverbear.org/2014/11/23/openwrt-in-virtualbox/
 
 ### Config
-URL="https://downloads.openwrt.org/chaos_calmer/15.05/x86/generic/openwrt-15.05-x86-generic-combined-ext4.img.gz"
-VDI="./openwrt.15.05.vdi"
+URL="https://downloads.openwrt.org/chaos_calmer/15.05.1/x86/generic/openwrt-15.05.1-x86-generic-combined-ext4.img.gz"
+VDI="./openwrt.15.05.1.vdi"
 VMNAME="OpenWRT"
 SIZE='512000000'
 
@@ -166,3 +166,29 @@ config zone
 /etc/init.d/firewall reload
 
 # Now we are ready to create clients and attach them to the 3-switch port
+
+# Create the following install.sh script
+cat << 'EOF_CFG' > /root/install.sh
+opkg update
+opkg install curl
+opkg install git-http
+
+# the next command hangs sometimes due to unknown reason
+# reinstalling git/git-http seems to help
+cd /tmp && git clone https://github.com/katakombi/NFguardian.git
+
+# linking main files for immediate use...
+ln -s /tmp/NFguardian/files/etc/init.d/inithost /etc/init.d
+ln -s /tmp/NFguardian/files/etc/inithost.cfg /etc/inithost.cfg
+
+# setting up git and checking out repository
+cd /tmp/NFguardian && git config user.email "katakombi@gmail.com" && git config user.name "avid developer" && git config color.ui "never"
+
+echo "ready for development and checkin"
+EOF_CFG
+
+chmod u+x /root/install.sh
+
+/root/install.sh
+
+# Ready for development....
