@@ -101,9 +101,15 @@ coreutils-sort
 # coreutils-stat can be replaced by date
 # dansguardian
 e2guardian
-# to encrypt SSD
+# to encrypt USB key
 kmod-crypto-aes
+kmod-crypto-xts 
+kmod-crypto-iv 
+kmod-crypto-misc 
+cryptsetup
 # to deal with disks
+kmod-fs-ext4
+e2fsprogs
 fdisk
 fstools
 htop
