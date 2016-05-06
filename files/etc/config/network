@@ -6,10 +6,10 @@ config interface 'loopback'
 	option netmask '255.0.0.0'
 
 config globals 'globals'
-	option ula_prefix 'fd97:b40d:8636::/48'
+	option ula_prefix 'fd8e:d514:7b0f::/48'
 
 config interface 'lan'
-	option ifname 'eth0.1'
+	option ifname 'eth1'
 	option force_link '1'
 	option type 'bridge'
 	option proto 'static'
@@ -18,25 +18,10 @@ config interface 'lan'
 	option ip6assign '60'
 
 config interface 'wan'
-	option ifname 'eth0.2'
+	option ifname 'eth0'
 	option proto 'dhcp'
 
 config interface 'wan6'
-	option ifname 'eth0.2'
+	option ifname 'eth0'
 	option proto 'dhcpv6'
-
-config switch
-	option name 'switch0'
-	option reset '1'
-	option enable_vlan '1'
-
-config switch_vlan
-	option device 'switch0'
-	option vlan '1'
-	option ports '1 2 3 4 5t'
-
-config switch_vlan
-	option device 'switch0'
-	option vlan '2'
-	option ports '0 5t'
 

@@ -1,7 +1,7 @@
 
 config system
 	option hostname 'NFguardian'
-	option timezone 'UTC'
+	option timezone 'GMT'
 
 config timeserver 'ntp'
 	list server '0.openwrt.pool.ntp.org'
@@ -11,20 +11,24 @@ config timeserver 'ntp'
 	option enabled '1'
 	option enable_server '0'
 
-config led 'led_usb'
-	option name 'USB'
-	option sysfs 'tp-link:green:usb'
+config led 'led_wan'
+	option name 'WAN'
+	option sysfs 'pca963x:caiman:white:wan'
+	option trigger 'netdev'
+	option dev 'eth0'
+	option mode 'link tx rx'
+
+config led 'led_usb2'
+	option name 'USB2'
+	option sysfs 'pca963x:caiman:white:usb2'
 	option trigger 'usbdev'
 	option dev '1-1'
 	option interval '50'
 
-config led 'led_wlan'
-	option name 'WLAN'
-	option sysfs 'tp-link:green:wlan'
-	option trigger 'phy0tpt'
-
-config button
-	option button 'wps'
-	option action 'pressed'
-	option handler 'uci set wireless.@wifi-device[0].disabled=1 && wifi'
+config led 'led_usb3'
+	option name 'USB3'
+	option sysfs 'pca963x:caiman:white:usb3_1'
+	option trigger 'usbdev'
+	option dev '2-1'
+	option interval '50'
 
