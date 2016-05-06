@@ -1,0 +1,25 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2015 brglng@github.com
+
+START=99
+STOP=99
+
+start() {
+#	[ -e /dev/sda -o -h /dev/sda ] || 
+#	{ logwrite "need external encrypted storage mounted"; exit }
+
+	mkdir -p /tmp/bin
+	zcat /usr/bin/syncthing.gz > /tmp/bin/syncthing && chmod u+x /tmp/bin/syncthing
+
+	if [ "$(/tmp/bin/syncthing -upgrade-check | grep -i 'no upgrade available')" == "" ]; then
+		/tmp/bin/syncthing -upgrade
+		cat /tmp/bin/syncthing | gzip -c > /usr/bin/syncthing.gz
+	fi
+	
+	mkdir -p /mnt/SyncThing
+        service_start /tmp/bin/syncthing 2>&1 | logger -t syncthing &
+}
+
+stop() {
+        service_stop /tmp/bin/syncthing
+}
