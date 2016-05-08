@@ -78,7 +78,7 @@ curl
 # add wget with ssl support
 # needed for dyndns update TODO: replace using curl
 wget
-# add https webserver
+# add https webserver for luci
 ca-certificates
 uhttpd
 # add luci
@@ -100,7 +100,7 @@ luci-theme-bootstrap
 coreutils-sort
 # coreutils-stat can be replaced by date
 # dansguardian
-e2guardian
+# e2guardian
 # to encrypt USB key
 kmod-crypto-aes
 kmod-crypto-xts 
@@ -114,7 +114,7 @@ fdisk
 fstools
 htop
 screen
-# lighttpd
+# lighttpd for owncloud
 lighttpd 
 lighttpd-mod-cgi 
 luci-mod-admin-full 
@@ -139,9 +139,9 @@ php5-mod-mbstring
 php5-mod-mcrypt
 php5-mod-openssl
 php5-mod-pdo
-php5-mod-pdo-pgsql
+#php5-mod-pdo-pgsql
 php5-mod-pdo-sqlite
-php5-mod-pgsql
+#php5-mod-pgsql
 php5-mod-session
 php5-mod-simplexml
 php5-mod-sqlite3
