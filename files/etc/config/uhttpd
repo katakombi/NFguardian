@@ -1,9 +1,9 @@
 
 config uhttpd 'main'
-	list listen_http '0.0.0.0:80'
-	list listen_http '[::]:80'
-	list listen_https '0.0.0.0:443'
-	list listen_https '[::]:443'
+	list listen_http '0.0.0.0:81'
+	list listen_http '[::]:81'
+	list listen_https '0.0.0.0:444'
+	list listen_https '[::]:444'
 	option redirect_https '1'
 	option home '/www'
 	option rfc1918_filter '1'
