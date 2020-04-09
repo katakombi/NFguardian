@@ -1,2 +1,5 @@
 openwrt-imagebuilder-19.07.2-ath79-generic.Linux-x86_64.tar.xz
 openwrt-imagebuilder-19.07.2-ath79-generic.Linux-x86_64/
+*.bin
+*.manifest
+sha256sums
