@@ -26,3 +26,4 @@ coreutils-sort
 # coreutils-stat can be replaced by date
 # luci
 luci
+uhttpd-mod-ubus
